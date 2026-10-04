@@ -19,6 +19,7 @@ import FilterPanel, {
 } from "./FilterPanel";
 import { rankListings } from "@/lib/scoring";
 import SavedListingsPanel from "./SavedListingsPanel";
+import PriorityTable, { type DistanceEntry } from "./PriorityTable";
 
 declare global {
   interface Window {
@@ -210,11 +211,56 @@ export default function KakaoMap() {
     [allListings, filters],
   );
 
-  // 조건에 맞는 매물끼리 가중치로 순위를 매겨, 상위 10개의 키만 모아둔다
-  const top10Keys = useMemo(() => {
-    const ranked = rankListings(matchedListings, weights).slice(0, 10);
-    return new Map(ranked.map((listing, index) => [keyOf(listing), index + 1]));
-  }, [matchedListings, weights]);
+  // 조건에 맞는 매물끼리 가중치로 순위를 매긴 상위 10개 (지도 핀 강조 + 우선순위 표에서 함께 사용)
+  const top10List = useMemo(
+    () => rankListings(matchedListings, weights).slice(0, 10),
+    [matchedListings, weights],
+  );
+  const top10Keys = useMemo(
+    () => new Map(top10List.map((listing, index) => [keyOf(listing), index + 1])),
+    [top10List],
+  );
+
+  // 우선순위 표에 보여줄 거리(학교 또는 편의점)를 상위 10개에 한해서만 계산한다.
+  // 가중치 슬라이더를 드래그하는 동안 매번 요청하지 않도록 살짝 지연한다.
+  const [priorityDistances, setPriorityDistances] = useState<Map<string, DistanceEntry>>(
+    new Map(),
+  );
+  useEffect(() => {
+    let cancelled = false;
+    const keys = top10List.map(keyOf);
+
+    const timer = setTimeout(() => {
+      setPriorityDistances(new Map(keys.map((k) => [k, "loading" as DistanceEntry])));
+
+      keys.forEach(async (key) => {
+        const [시군구, 번지, 건물명] = key.split("|");
+        try {
+          const res = await fetch("/api/listings/distance", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 시군구, 번지, 건물명, school }),
+          });
+          const data = await res.json();
+          const entry: DistanceEntry = school
+            ? data.학교
+            : { 분: data.편의점_분, 상태: data.편의점_분 != null ? "ok" : "없음" };
+          if (!cancelled) {
+            setPriorityDistances((prev) => new Map(prev).set(key, entry));
+          }
+        } catch {
+          if (!cancelled) {
+            setPriorityDistances((prev) => new Map(prev).set(key, "error"));
+          }
+        }
+      });
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [top10List, school]);
 
   // 3) 필터·가중치가 바뀔 때마다, 다시 불러오지 않고 핀 표시만 갱신한다
   //    - 조건에 안 맞으면 숨기고, 상위 10위 안에 들면 더 크게 + 순위 숫자를 보여준다
@@ -314,6 +360,12 @@ export default function KakaoMap() {
         )}
         <div ref={mapContainerRef} className="h-full w-full" />
       </div>
+      <PriorityTable
+        listings={top10List}
+        distances={priorityDistances}
+        school={school}
+        onSelect={setSelected}
+      />
     </div>
   );
 }
