@@ -1,0 +1,11 @@
+# .gitignore와 별개로 Vercel CLI가 업로드하는 파일을 명시적으로 제한한다
+# (vercel deploy가 .gitignore를 따르지 않는 경우가 있어 사고가 있었음 — 반드시 유지)
+# 주의: data/processed/*.json은 API 라우트가 런타임에 직접 읽으므로 절대 여기 넣지 않는다
+.env
+.env.*
+.bkit
+.claude
+trash-can
+public_data
+scripts
+*.md
