@@ -108,8 +108,12 @@ def main():
             "조회한_주소": used_address,
         })
 
-        if i % 200 == 0:
-            print(f"  진행: {i}/{len(buildings)} (성공 {success_count}건)")
+        if i % 100 == 0:
+            print(f"  진행: {i}/{len(buildings)} (성공 {success_count}건)", flush=True)
+            # 중간에 멈춰도 그동안 모은 결과가 날아가지 않도록 중간 저장
+            os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
+            with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
+                json.dump(results, f, ensure_ascii=False, indent=2)
 
         time.sleep(REQUEST_DELAY_SECONDS)
 

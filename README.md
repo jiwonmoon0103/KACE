@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 대학생을 위한 자취방을 구해줘~
 
-## Getting Started
+서울 성북구에서 월세방을 구하는 대학생을 위한 프로토타입 웹서비스입니다. "지금 나와 있는 매물"을 나열하는 기존 부동산 서비스와 달리, 국토부 실거래가 공공데이터를 생존분석(Kaplan-Meier, Cox 비례위험모형)으로 학습해 **앞으로 일정 기간 안에 그 주소가 계약될 확률**을 예측해서 보여줍니다.
 
-First, run the development server:
+## 핵심 기능
+
+1. **계약 확률/추이 계산** — 건물(주소) 단위 과거 계약 간격을 Kaplan-Meier·Cox 모형으로 학습해, 사용자가 고른 1~12개월 기준 계약 확률과 최근 추이를 계산하고 OpenAI가 이를 자연스러운 문장으로 설명합니다.
+2. **조건별 우선순위 지도** — 보증금·월세·평수·지역·건물유형·단기임대 여부로 매물을 거르고, 조건별 가중치로 점수를 매겨 카카오맵 위에 상위 매물을 강조해서 보여줍니다.
+3. **단기임대 구분 + 룸메이트 찾기(진입 UI)** — 단기임대 매물을 배지로 표시하고, 룸메이트를 구하는 학생을 위한 진입 화면을 제공합니다(실제 매칭 로직은 다음 사이클 예정).
+4. **거리 정보** — 매물에서 학교·편의점·카페까지의 도보 시간을 추정해서 보여줍니다.
+
+더 자세한 기획 배경과 규칙은 [`PRD.md`](PRD.md), 화면·데이터 흐름 설계는 [`DESIGN.md`](DESIGN.md)를 참고하세요.
+
+## 기술 스택
+
+- **Next.js 16** (App Router) + **React 19** + **TypeScript** (strict) + **Tailwind CSS v4**
+- **Python** (오프라인 1회 실행) — `public_data/` 실거래 엑셀을 정리하고 Kaplan-Meier/Cox 모형을 학습해 `data/processed/*.json`으로 저장. 배포된 서비스는 이 결과 파일만 읽으므로 런타임에 Python이 필요 없습니다.
+- **카카오맵** REST API(서버) + JavaScript SDK(브라우저) — 좌표 변환, 주변 시설 검색, 지도 표시
+- **OpenAI API** — 계산된 확률 숫자를 사람이 읽기 쉬운 문장으로 설명(숫자 자체는 만들어내지 않음)
+- **Vercel** — 배포
+
+## 로컬 실행
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+브라우저에서 `http://localhost:3000` 접속.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`.env` 파일에 아래 값이 필요합니다 (저장소에는 포함되어 있지 않습니다):
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| 변수 이름 | 용도 |
+|-----------|------|
+| `OPENAI_API_KEY` | 확률 설명 문장 생성 |
+| `KAKAO_REST_API_KEY` | 주소→좌표 변환, 주변 시설 검색 (서버 전용) |
+| `NEXT_PUBLIC_KAKAO_JS_KEY` | 브라우저 지도 표시 |
 
-## Learn More
+## 기타 명령어
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run build   # 프로덕션 빌드
+npm run start   # 프로덕션 빌드 실행
+npm run lint    # ESLint
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 데이터 출처
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+국토교통부 실거래가 공개시스템의 성북구 연립다세대·오피스텔 전월세 실거래 데이터(2021~2026)를 사용했습니다. 이 데이터는 과거 거래 이력을 기반으로 한 통계적 추정치이며, 특정 매물의 실제 계약 가능 여부를 보장하지 않습니다.
