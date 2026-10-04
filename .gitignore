@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# bkit 플러그인 내부 상태 (audit/runtime 로그, 개인 로컬 상태라 공유 불필요)
+/.bkit/
+
+# 삭제 대기 중인 임시 파일 보관함
+/trash-can/
+
+# Python 스크립트로 생성되는 데이터 (public_data/ 원본 엑셀에서 재생성 가능)
+/data/processed/

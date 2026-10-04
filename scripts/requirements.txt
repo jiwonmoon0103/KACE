@@ -1,0 +1,4 @@
+openpyxl
+lifelines
+requests
+python-dotenv
